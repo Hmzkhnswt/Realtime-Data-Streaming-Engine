@@ -4,6 +4,8 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator 
 import requests
 import json
+from kafka import KafkaProducer
+import time
 
 
 default_args = {
@@ -25,7 +27,7 @@ def get_data():
 def format_data(response):
     data = {}
     location = response['location']
-    data['id'] = uuid.uuid4()
+    # data['id'] = uuid.uuid4()
     data['first_name'] = response['name']['first']
     data['last_name'] = response['name']['last']
     data['gender'] = response['gender']
@@ -42,10 +44,21 @@ def format_data(response):
     return data
 
 def streaming_data():
+    topic_name = 'users_created'
     response = get_data()
     response = format_data(response)
-    response = json.dumps(response, indent=3)
-    print(response)
+    producer = KafkaProducer(bootstrap_servers=['localhost:9092'])
+    try:
+        producer.send(topic_name, json.dumps(response).encode('utf-8'))
+        producer.flush()
+    except Exception as e:
+        print("Failed to send data to Kafka", e)
+    finally:
+        producer.close()
+
+
+    # response = json.dumps(response, indent=3)
+    # print(response)
 
 
 
