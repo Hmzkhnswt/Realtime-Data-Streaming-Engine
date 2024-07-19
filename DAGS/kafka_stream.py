@@ -1,94 +1,67 @@
-from datetime import datetime
 import uuid
+from datetime import datetime
 from airflow import DAG
-from airflow.operators.python import PythonOperator 
-import requests
+from airflow.operators.python import PythonOperator
 import json
-from kafka import KafkaProducer
-import time
+from kafka import KafkaProducer    
+import time    
 import logging
 
-
-'''
-This script is used to stream data to Kafka topic, 
-followed by getting data from`randomuser.me` API,
-formatting the data and sending it to Kafka topic.
-and finally a dag is created to schedule the task.
-'''
-
 default_args = {
-    'owner': 'Hamza',
-    'depends_on_past': False,
-    'start_date': datetime(2024, 7, 16),
-    'email_on_failure': False,
-    'email_on_retry': False,
-    'retries': 1,
+    'owner': 'airscholar',
+    'start_date': datetime(2023, 9, 3, 10, 00)
 }
 
 def get_data():
-    url = "https://randomuser.me/api/"
-    response = requests.get(url)
-    response = response.json()
-    response = response['results'][0]
-    return response
+    import requests
 
-def format_data(response):
+    res = requests.get("https://randomuser.me/api/")
+    res = res.json()
+    res = res['results'][0]
+
+    return res
+
+def format_data(res):
     data = {}
-    location = response['location']
+    location = res['location']
     # data['id'] = uuid.uuid4()
-    data['first_name'] = response['name']['first']
-    data['last_name'] = response['name']['last']
-    data['gender'] = response['gender']
+    data['first_name'] = res['name']['first']
+    data['last_name'] = res['name']['last']
+    data['gender'] = res['gender']
     data['address'] = f"{str(location['street']['number'])} {location['street']['name']}, " \
                       f"{location['city']}, {location['state']}, {location['country']}"
     data['post_code'] = location['postcode']
-    data['email'] = response['email']
-    data['username'] = response['login']['username']
-    data['dob'] = response['dob']['date']
-    data['registered_date'] = response['registered']['date']
-    data['phone'] = response['phone']
-    data['picture'] = response['picture']['medium'] 
-    
+    data['email'] = res['email']
+    data['username'] = res['login']['username']
+    data['dob'] = res['dob']['date']
+    data['registered_date'] = res['registered']['date']
+    data['phone'] = res['phone']
+    data['picture'] = res['picture']['medium']
+
     return data
 
-def streaming_data():
-    topic_name = 'users_created'
-    # response = get_data()
-    # response = format_data(response)
-    # response = json.dumps(response, indent=3)
-    # print(response)  
-      
-    producer = KafkaProducer(bootstrap_servers=['broker:29092'])
+def stream_data():
+    producer = KafkaProducer(bootstrap_servers=['broker:29092'], max_block_ms=5000)
+    curr_time = time.time()
 
     while True:
-        if time.time() > current_time + 60:
+        if time.time() > curr_time + 60: # Getting data for 1 minute from api 
             break
         try:
-            response = get_data()
-            response = format_data(response)
-            producer.send(topic_name, json.dumps(response).encode('utf-8'))
+            res = get_data()
+            res = format_data(res)
+
+            producer.send('users_created', json.dumps(res).encode('utf-8'))
         except Exception as e:
-            print("Failed to send data to Kafka", e)
-            logging.info("Failed to send data to Kafka", e)
-        finally:
-            producer.close() 
+            logging.error(f'An error occured: {e}')
+            continue
 
+with DAG('user_automation',
+         default_args=default_args,
+         schedule_interval='@daily',
+         catchup=False) as dag:
 
-'''
-Creating a DAG 
-'''
-
-with DAG(
-    dag_id='user_automation',
-    default_args=default_args,
-    schedule_interval='@daily',
-    catchup=False,
-) as dag:
-
-    streaming_task= PythonOperator(
-        task_id='data_from_api',
-        python_callable=streaming_data
+    streaming_task = PythonOperator(
+        task_id='stream_data_from_api',
+        python_callable=stream_data
     )
-
-
-# streaming_data()
