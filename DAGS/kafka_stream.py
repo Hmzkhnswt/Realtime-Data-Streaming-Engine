@@ -6,7 +6,15 @@ import requests
 import json
 from kafka import KafkaProducer
 import time
+import logging
 
+
+'''
+This script is used to stream data to Kafka topic, 
+followed by getting data from`randomuser.me` API,
+formatting the data and sending it to Kafka topic.
+and finally a dag is created to schedule the task.
+'''
 
 default_args = {
     'owner': 'Hamza',
@@ -45,35 +53,42 @@ def format_data(response):
 
 def streaming_data():
     topic_name = 'users_created'
-    response = get_data()
-    response = format_data(response)
-    producer = KafkaProducer(bootstrap_servers=['localhost:9092'])
-    try:
-        producer.send(topic_name, json.dumps(response).encode('utf-8'))
-        producer.flush()
-    except Exception as e:
-        print("Failed to send data to Kafka", e)
-    finally:
-        producer.close()
-
-
+    # response = get_data()
+    # response = format_data(response)
     # response = json.dumps(response, indent=3)
-    # print(response)
+    # print(response)  
+      
+    producer = KafkaProducer(bootstrap_servers=['broker:29092'])
+
+    while True:
+        if time.time() > current_time + 60:
+            break
+        try:
+            response = get_data()
+            response = format_data(response)
+            producer.send(topic_name, json.dumps(response).encode('utf-8'))
+        except Exception as e:
+            print("Failed to send data to Kafka", e)
+            logging.info("Failed to send data to Kafka", e)
+        finally:
+            producer.close() 
 
 
+'''
+Creating a DAG 
+'''
+
+with DAG(
+    dag_id='user_automation',
+    default_args=default_args,
+    schedule_interval='@daily',
+    catchup=False,
+) as dag:
+
+    streaming_task= PythonOperator(
+        task_id='data_from_api',
+        python_callable=streaming_data
+    )
 
 
-# with DAG(
-#     dag_id='kafka_stream',
-#     default_args=default_args,
-#     schedule_interval='@daily',
-#     catchup=False,
-# ) as dag:
-
-#     streaming_data = PythonOperator(
-#         task_id='streaming_data',
-#         python_callable=streaming_data
-#     )
-
-
-streaming_data()
+# streaming_data()
