@@ -10,6 +10,3 @@ Apache Spark: For data processing with its master and worker nodes.
 Cassandra: Where the processed data will be stored.
 
 
-Architecture of the project:
-
-https://github.com/airscholar/e2e-data-engineering/blob/main/Data%20engineering%20architecture.png
