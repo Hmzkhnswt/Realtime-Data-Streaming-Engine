@@ -37,7 +37,7 @@ def create_table(session):
 def insert_data(session, **kwargs):
     print("inserting data...")
 
-    user_id = kwargs.get('id')
+    # user_id = kwargs.get('id')
     first_name = kwargs.get('first_name')
     last_name = kwargs.get('last_name')
     gender = kwargs.get('gender')
@@ -69,8 +69,8 @@ def create_spark_connection():
     try:
         s_conn = SparkSession.builder \
             .appName('SparkDataStreaming') \
-            .config('spark.jars.packages', "com.datastax.spark:spark-cassandra-connector_2.13:3.5.0,"
-                                           "org.apache.spark:spark-sql-kafka-0-10_2.13:3.5.0") \
+            .config('spark.jars.packages', "com.datastax.spark:spark-cassandra-connector_2.13:3.4.1,"
+                                           "org.apache.spark:spark-sql-kafka-0-10_2.13:3.4.1") \
             .config('spark.cassandra.connection.host', 'localhost') \
             .getOrCreate()
 
@@ -113,7 +113,7 @@ def create_cassandra_connection():
 
 def create_selection_df_from_kafka(spark_df):
     schema = StructType([
-        StructField("id", StringType(), False),
+        # StructField("id", StringType(), False),
         StructField("first_name", StringType(), False),
         StructField("last_name", StringType(), False),
         StructField("gender", StringType(), False),
