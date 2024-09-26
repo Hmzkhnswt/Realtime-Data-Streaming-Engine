@@ -15,6 +15,11 @@ This project demonstrates a real-time data streaming engine using Apache Kafka, 
 - [Contributing](#contributing)
 - [License](#license)
 
+## System Architecture
+
+![Data Streaming Engine](https://github.com/user-attachments/assets/71ed12eb-1826-4e2d-ab83-c155e1dd97cc)
+
+
 ## Prerequisites
 
 Before you begin, ensure you have the following installed on your machine:
